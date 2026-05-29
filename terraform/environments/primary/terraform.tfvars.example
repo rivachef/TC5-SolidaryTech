@@ -1,0 +1,13 @@
+aws_region   = "us-east-1"
+project_name = "solidarytech"
+
+# AWS Academy: descobrir com `aws sts get-caller-identity`
+# Tipico: arn:aws:iam::<ACCOUNT_ID>:role/LabRole
+lab_role_arn = "arn:aws:iam::SEU_ACCOUNT_ID:role/LabRole"
+
+# Master password dos RDS. NUNCA commitar este arquivo (esta no .gitignore).
+db_username = "solidary"
+db_password = "TROQUE_AQUI_DEV_PASSWORD"
+
+# Nodes do EKS (Sprint 5 fara rightsizing baseado em metricas reais)
+node_desired_size = 2
