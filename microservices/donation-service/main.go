@@ -76,7 +76,9 @@ func main() {
 func (a *App) HealthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status":"ok","service":"donation-service"}`))
+	if _, err := w.Write([]byte(`{"status":"ok","service":"donation-service"}`)); err != nil {
+		log.Printf("Falha ao escrever resposta /health: %v", err)
+	}
 }
 
 func (a *App) DonationHandler(w http.ResponseWriter, r *http.Request) {
@@ -106,7 +108,9 @@ func (a *App) DonationHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(d)
+		if err := json.NewEncoder(w).Encode(d); err != nil {
+			log.Printf("Falha ao serializar doacao criada: %v", err)
+		}
 		return
 	}
 
@@ -121,11 +125,16 @@ func (a *App) DonationHandler(w http.ResponseWriter, r *http.Request) {
 		donations := []Donation{}
 		for rows.Next() {
 			var d Donation
-			rows.Scan(&d.ID, &d.NgoID, &d.Amount, &d.DonorName, &d.Status, &d.CreatedAt)
+			if err := rows.Scan(&d.ID, &d.NgoID, &d.Amount, &d.DonorName, &d.Status, &d.CreatedAt); err != nil {
+				log.Printf("Falha ao escanear linha: %v", err)
+				continue
+			}
 			donations = append(donations, d)
 		}
 
-		json.NewEncoder(w).Encode(donations)
+		if err := json.NewEncoder(w).Encode(donations); err != nil {
+			log.Printf("Falha ao serializar lista de doacoes: %v", err)
+		}
 		return
 	}
 
