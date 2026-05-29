@@ -9,9 +9,9 @@ variable "cluster_name" {
 }
 
 variable "kubernetes_version" {
-  description = "Versao do Kubernetes."
+  description = "Versao do Kubernetes. Em STANDARD_SUPPORT em jan/2026: 1.33, 1.34, 1.35. EXTENDED_SUPPORT (6x mais caro): 1.31, 1.32."
   type        = string
-  default     = "1.31"
+  default     = "1.34"
 }
 
 variable "cluster_role_arn" {
@@ -73,4 +73,10 @@ variable "endpoint_public_access" {
   description = "Habilitar acesso publico ao endpoint do cluster (true necessario fora da VPC)."
   type        = bool
   default     = true
+}
+
+variable "create_oidc_provider" {
+  description = "Cria o IAM OIDC provider (pre-requisito para IRSA). AWS Academy NAO permite (iam:CreateOpenIDConnectProvider negado) — manter false."
+  type        = bool
+  default     = false
 }

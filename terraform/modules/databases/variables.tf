@@ -14,9 +14,9 @@ variable "rds_security_group_id" {
 }
 
 variable "postgres_version" {
-  description = "Versao do PostgreSQL."
+  description = "Versao do PostgreSQL. Versoes disponiveis no us-east-1 (jan/2026): 16.10 a 16.14."
   type        = string
-  default     = "16.4"
+  default     = "16.10"
 }
 
 variable "instance_class" {

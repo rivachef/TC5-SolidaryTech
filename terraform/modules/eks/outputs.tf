@@ -16,7 +16,8 @@ output "cluster_oidc_issuer_url" {
 }
 
 output "oidc_provider_arn" {
-  value = aws_iam_openid_connect_provider.eks.arn
+  description = "ARN do OIDC provider (null se create_oidc_provider=false, comum em AWS Academy)."
+  value       = try(aws_iam_openid_connect_provider.eks[0].arn, null)
 }
 
 output "node_group_name" {

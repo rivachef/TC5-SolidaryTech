@@ -20,13 +20,17 @@ resource "aws_eks_cluster" "this" {
 }
 
 # OIDC provider pre-requisito para IRSA (ArgoCD, Velero, External Secrets, etc.)
+# AWS Academy NAO permite criar OIDC providers (iam:CreateOpenIDConnectProvider negado).
+# Em contas reais, ativar via create_oidc_provider=true.
 data "tls_certificate" "cluster" {
-  url = aws_eks_cluster.this.identity[0].oidc[0].issuer
+  count = var.create_oidc_provider ? 1 : 0
+  url   = aws_eks_cluster.this.identity[0].oidc[0].issuer
 }
 
 resource "aws_iam_openid_connect_provider" "eks" {
+  count           = var.create_oidc_provider ? 1 : 0
   client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = [data.tls_certificate.cluster.certificates[0].sha1_fingerprint]
+  thumbprint_list = [data.tls_certificate.cluster[0].certificates[0].sha1_fingerprint]
   url             = aws_eks_cluster.this.identity[0].oidc[0].issuer
 
   tags = {
@@ -38,6 +42,18 @@ resource "aws_iam_openid_connect_provider" "eks" {
 resource "aws_launch_template" "nodes" {
   name_prefix            = "${var.cluster_name}-nodes-"
   vpc_security_group_ids = [var.node_security_group_id]
+
+  # Quando o node group usa launch template, o disk_size NAO pode estar
+  # no aws_eks_node_group — precisa vir do bloco block_device_mappings aqui.
+  block_device_mappings {
+    device_name = "/dev/xvda"
+    ebs {
+      volume_size           = var.node_disk_size
+      volume_type           = "gp3"
+      delete_on_termination = true
+      encrypted             = true
+    }
+  }
 
   metadata_options {
     http_tokens                 = "required" # IMDSv2 obrigatorio (security)
@@ -67,7 +83,7 @@ resource "aws_eks_node_group" "this" {
 
   instance_types = var.node_instance_types
   ami_type       = "AL2023_x86_64_STANDARD"
-  disk_size      = var.node_disk_size
+  # disk_size NAO declarado aqui — conflita com launch template; ver block_device_mappings acima.
 
   launch_template {
     id      = aws_launch_template.nodes.id
