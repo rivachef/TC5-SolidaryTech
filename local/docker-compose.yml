@@ -1,0 +1,96 @@
+name: solidarytech-local
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: solidary-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-solidary}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-solidary_dev_pass}
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init.sh:/docker-entrypoint-initdb.d/00-init.sh:ro
+      - ../microservices/ngo-service/db/init.sql:/sql/ngo-init.sql:ro
+      - ../microservices/donation-service/db/init.sql:/sql/donation-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-solidary}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  localstack:
+    image: localstack/localstack:3
+    container_name: solidary-localstack
+    environment:
+      SERVICES: sqs,dynamodb
+      DEBUG: 0
+      AWS_DEFAULT_REGION: us-east-1
+    ports:
+      - "4566:4566"
+    volumes:
+      - ./localstack/init.sh:/etc/localstack/init/ready.d/init.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "awslocal sqs list-queues > /dev/null 2>&1 && awslocal dynamodb list-tables > /dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+
+  ngo-service:
+    build:
+      context: ../microservices/ngo-service
+    container_name: solidary-ngo
+    environment:
+      PORT: 8081
+      DATABASE_URL: "postgres://${POSTGRES_USER:-solidary}:${POSTGRES_PASSWORD:-solidary_dev_pass}@postgres:5432/ngo_db"
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  donation-service:
+    build:
+      context: ../microservices/donation-service
+    container_name: solidary-donation
+    environment:
+      PORT: 8082
+      DATABASE_URL: "postgres://${POSTGRES_USER:-solidary}:${POSTGRES_PASSWORD:-solidary_dev_pass}@postgres:5432/donation_db"
+      AWS_REGION: us-east-1
+      AWS_SQS_URL: "http://localstack:4566/000000000000/solidary-donations"
+      AWS_ENDPOINT_URL: "http://localstack:4566"
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    restart: unless-stopped
+
+  volunteer-service:
+    build:
+      context: ../microservices/volunteer-service
+    container_name: solidary-volunteer
+    environment:
+      PORT: 8083
+      AWS_REGION: us-east-1
+      AWS_DYNAMODB_TABLE: SolidaryTechVolunteers
+      AWS_ENDPOINT_URL: "http://localstack:4566"
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+    ports:
+      - "8083:8083"
+    depends_on:
+      localstack:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
