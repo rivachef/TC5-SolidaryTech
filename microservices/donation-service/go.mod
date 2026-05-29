@@ -1,6 +1,6 @@
 module donation-service
 
-go 1.24
+go 1.26
 
 require (
 	github.com/aws/aws-sdk-go v1.51.10

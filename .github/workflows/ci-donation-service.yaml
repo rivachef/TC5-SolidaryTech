@@ -19,7 +19,7 @@ env:
   SERVICE_NAME: donation-service
   WORKING_DIR: microservices/donation-service
   AWS_REGION: us-east-1
-  GO_VERSION: '1.24'
+  GO_VERSION: '1.26'
 
 jobs:
   lint-test:
@@ -45,7 +45,7 @@ jobs:
       - name: Lint (golangci-lint)
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.64
+          version: latest
           working-directory: ${{ env.WORKING_DIR }}
           args: --timeout=5m
 
