@@ -342,7 +342,8 @@ GRAFANA_URL=$(kubectl get svc prometheus-grafana -n monitoring -o jsonpath='{.st
 echo "Grafana:"
 echo "  URL:   http://$GRAFANA_URL"
 echo "  User:  admin"
-echo "  Pass:  solidarytech2026"
+GRAFANA_PASS=$(kubectl get secret grafana-admin -n monitoring -o jsonpath='{.data.admin-password}' 2>/dev/null | base64 -d || echo "ver: kubectl get secret grafana-admin -n monitoring")
+echo "  Pass:  $GRAFANA_PASS"
 echo ""
 echo "Verificar pods:  kubectl get pods -n solidarytech -n monitoring"
 echo "Destruir:        ./scripts/destroy-all.sh"

@@ -4,8 +4,13 @@
 
 grafana:
   enabled: true
-  adminUser: admin
-  adminPassword: solidarytech2026
+  # Credenciais vem de K8s Secret grafana-admin (gerado pelo install-monitoring.sh
+  # com password random). Recuperar com:
+  #   kubectl get secret grafana-admin -n monitoring -o jsonpath='{.data.admin-password}' | base64 -d
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
 
   service:
     type: LoadBalancer

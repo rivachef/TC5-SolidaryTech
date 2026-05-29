@@ -33,10 +33,22 @@ echo "============================================"
 echo ""
 
 # -------------------------------------------------------
-# 1. Namespace
+# 1. Namespace + secret grafana-admin (password random)
 # -------------------------------------------------------
-log_info "[1/6] Garantindo namespace monitoring..."
+log_info "[1/6] Garantindo namespace monitoring + secret grafana-admin..."
 kubectl apply -f "$MONITORING_DIR/namespace.yaml"
+
+# Gera password random apenas na 1a vez (preserva entre installs)
+if ! kubectl get secret grafana-admin -n monitoring > /dev/null 2>&1; then
+    GRAFANA_PASS=$(openssl rand -base64 24 | tr -d '=+/' | head -c 24)
+    kubectl create secret generic grafana-admin \
+        --namespace monitoring \
+        --from-literal=admin-user=admin \
+        --from-literal=admin-password="$GRAFANA_PASS"
+    log_ok "Secret grafana-admin criado (password random 24 chars)"
+else
+    log_ok "Secret grafana-admin ja existe (password preservada)"
+fi
 
 # -------------------------------------------------------
 # 2. Helm repos
@@ -105,10 +117,12 @@ if [ -f "$DASHBOARD_FILE" ]; then
     kubectl rollout status deployment/prometheus-grafana -n monitoring --timeout=120s > /dev/null 2>&1
 
     GRAFANA_POD=$(kubectl get pods -n monitoring -l app.kubernetes.io/name=grafana -o jsonpath='{.items[0].metadata.name}')
+    # Password vem do secret K8s (nunca hardcoded)
+    GRAFANA_PASS=$(kubectl get secret grafana-admin -n monitoring -o jsonpath='{.data.admin-password}' | base64 -d)
     LOKI_UID=""
     for i in $(seq 1 12); do
         LOKI_UID=$(kubectl exec -n monitoring "$GRAFANA_POD" -c grafana -- \
-            curl -sf http://localhost:3000/api/datasources -u admin:solidarytech2026 2>/dev/null | \
+            curl -sf http://localhost:3000/api/datasources -u "admin:${GRAFANA_PASS}" 2>/dev/null | \
             python3 -c "import sys,json; ds=json.load(sys.stdin); print(next((d['uid'] for d in ds if d['type']=='loki'),''))" 2>/dev/null)
         [ -n "$LOKI_UID" ] && break
         sleep 5
@@ -143,7 +157,7 @@ echo ""
 echo "Grafana:"
 echo "  URL:  http://$GRAFANA_URL"
 echo "  User: admin"
-echo "  Pass: solidarytech2026"
+echo "  Pass: kubectl get secret grafana-admin -n monitoring -o jsonpath='{.data.admin-password}' | base64 -d"
 echo ""
 echo "OTel Collector (endpoint para os microsservicos):"
 echo "  gRPC: otel-collector-opentelemetry-collector.monitoring.svc.cluster.local:4317"
