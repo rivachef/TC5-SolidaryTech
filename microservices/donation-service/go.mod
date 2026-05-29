@@ -1,6 +1,9 @@
 module donation-service
 
-go 1.26
+// "go X.Y" e MINIMUM required version, nao target.
+// Compilamos com Go 1.26 (Dockerfile) para fix de CVEs stdlib, mas
+// declaramos 1.23 aqui para compat com golangci-lint (built com Go 1.24).
+go 1.23.0
 
 require (
 	github.com/aws/aws-sdk-go v1.51.10
