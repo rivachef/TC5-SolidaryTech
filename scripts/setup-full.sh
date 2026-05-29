@@ -5,11 +5,13 @@
 # Script master que orquestra o setup do ambiente SolidaryTech FASE 5.
 # EVOLUTIVO: cresce a cada sprint do hackathon.
 #
-# Sprint 2 (DONE):    bootstrap backend + terraform apply + kubeconfig
-# Sprint 3 (DONE):    CI/CD push de imagens pro ECR (via GitHub Actions)
-# Sprint 4 (DONE):    + build/push 1a imagem + ArgoCD + GitOps + NGINX Ingress
-# Sprint 5 (atual):   + Monitoring Stack (Prometheus + Loki + Grafana + OTel + New Relic)
-# Sprint 6 (futuro):  + Velero + DR drill
+# Sprint 2 (DONE):  bootstrap backend + terraform apply + kubeconfig
+# Sprint 3 (DONE):  CI/CD push de imagens pro ECR (via GitHub Actions)
+# Sprint 4 (DONE):  + build/push 1a imagem + ArgoCD + GitOps + NGINX Ingress
+# Sprint 5 (DONE):  + Monitoring Stack (Prometheus + Loki + Grafana + OTel + NR)
+# Sprint 5.5 (DONE): + Alertmanager (PagerDuty + Discord) + self-healing
+# Sprint 6 (DONE):  + Velero (backup cross-region)
+# Sprint 7 (atual): entrega final (relatorio + video)
 #
 # Uso:
 #   export AWS_ACCESS_KEY_ID=...
@@ -312,15 +314,22 @@ echo ""
 ###############################################################################
 # Step 12: Monitoring Stack (Prometheus + Loki + Grafana + OTel Collector)
 ###############################################################################
-log_info "[12/12] Instalando Monitoring Stack..."
+log_info "[12/13] Instalando Monitoring Stack..."
 "$SCRIPT_DIR/install-monitoring.sh"
+echo ""
+
+###############################################################################
+# Step 13: Velero (Sprint 6 — DR backup cross-region)
+###############################################################################
+log_info "[13/13] Instalando Velero (backup cross-region us-west-2)..."
+"$SCRIPT_DIR/install-velero.sh"
 echo ""
 
 ###############################################################################
 # Resumo final
 ###############################################################################
 echo "============================================"
-log_ok "Setup completo (Sprints 2-5)"
+log_ok "Setup completo (Sprints 2-6)"
 echo "============================================"
 echo ""
 
