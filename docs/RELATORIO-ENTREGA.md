@@ -284,22 +284,75 @@ Detalhe técnico em [`docs/DR-STRATEGY.md`](DR-STRATEGY.md).
 
 ---
 
-## 5. Evidências visuais (Sprint 7.5)
+## 5. Evidências visuais
 
-| # | Screenshot | Onde capturar |
-|---|------------|---------------|
-| 1 | ArgoCD UI mostrando 4 Apps `Synced + Healthy` | https://[ARGOCD_URL] |
-| 2 | Grafana dashboard `SolidaryTech Overview` com Golden Metrics | http://[GRAFANA_URL] |
-| 3 | New Relic Service Map com 3 serviços + DBs + SQS | https://one.newrelic.com |
-| 4 | New Relic Distributed Trace de um POST /donations | Idem |
-| 5 | PagerDuty incident criado via Alertmanager | https://app.pagerduty.com/incidents |
-| 6 | Discord channel com alertas + self-healing notifications | Discord |
-| 7 | GitHub Actions workflow `self-healing` run #26662680566 | https://github.com/rivachef/TC5-SolidaryTech/actions |
-| 8 | AWS Cost Explorer filtrado por `tag:Project=SolidaryTech` | AWS Console |
-| 9 | `kubectl get pods -n solidarytech` mostrando 7 Running | terminal |
-| 10 | `kubectl get backups -n velero` mostrando Completed | terminal |
-| 11 | Terraform DR environment com 1 node us-west-2 (opcional, após drill) | AWS Console |
-| 12 | GitHub Actions workflows CI dos 3 serviços Verde | https://github.com/rivachef/TC5-SolidaryTech/actions |
+Todos os screenshots em `docs/screenshots/`. Capturados em 2026-05-29 durante validação E2E do Sprint 7.
+
+### 5.1 GitOps + ArgoCD
+
+**ArgoCD UI — 4 Applications `Synced + Healthy`:**
+![ArgoCD apps healthy](screenshots/01-argocd-synced-healthy.png)
+
+> Prova de que `solidarytech-shared`, `ngo-service`, `donation-service` e `volunteer-service` estão totalmente sincronizados com o branch `main` do Git e em estado `Healthy` no cluster.
+
+**Pods em execução no cluster:**
+![Pods running](screenshots/02-kubectl-pods-running.png)
+
+### 5.2 CI/CD com DevSecOps
+
+**3 workflows CI verdes (lint + test + SAST + SCA + container scan + push ECR):**
+![GitHub Actions CI green](screenshots/03-github-actions-ci-green.png)
+
+### 5.3 Observabilidade + APM
+
+**Grafana — SolidaryTech Overview dashboard (parte 1):**
+![Grafana dashboard](screenshots/04a-grafana-overview-dashboard.png)
+
+**Grafana — Golden Metrics + Logs em tempo real (parte 2):**
+![Grafana golden metrics](screenshots/04b-grafana-overview-dashboard.png)
+
+**New Relic APM — lista dos 3 microsserviços:**
+![New Relic APM list](screenshots/05a-newrelic-apm-services-list.png)
+
+**New Relic — Summary do donation-service (Hot Path):**
+![New Relic donation summary](screenshots/05b-newrelic-donation-summary.png)
+
+**New Relic — Distributed Trace waterfall:**
+![New Relic distributed trace](screenshots/06-newrelic-distributed-trace.png)
+
+> Visualiza o caminho completo de uma requisição: HTTP → DB insert → SQS publish, com latência por span. Base para diagnóstico rápido de degradação.
+
+### 5.4 ITSM — Gestão de Incidentes
+
+**PagerDuty — 3 incidents triggered via Events API V2:**
+![PagerDuty incidents](screenshots/07-pagerduty-incidents.png)
+
+> Service `SolidaryTech-Production` com 3 incidents triggered pelo Alertmanager + curl manual de teste. Activity feed mostra "Triggered through the API".
+
+**Discord — canal com alertas Alertmanager + notificações self-healing:**
+![Discord alerts](screenshots/08-discord-alerts.png)
+
+### 5.5 Self-Healing — redução de MTTR
+
+**GitHub Actions — workflow self-healing executando rollout restart:**
+![GitHub Actions self-healing](screenshots/09-github-actions-self-healing.png)
+
+> Run #26662680566 — 43 segundos para concluir rollout restart de 3 pods do `donation-service` com notificações Discord automáticas.
+
+### 5.6 Disaster Recovery
+
+**Velero — backup completo cross-region (us-east-1 → us-west-2):**
+![Velero backups](screenshots/10-velero-backups-completed.png)
+
+**DynamoDB Global Tables — replica us-west-2 ACTIVE:**
+![DynamoDB Global Tables](screenshots/11-dynamodb-global-tables.png)
+
+### 5.7 FinOps — Tags em ação
+
+**AWS Tag Editor — 22 recursos com tag `Project = SolidaryTech`:**
+![AWS Tag Editor resources](screenshots/12-aws-tag-editor.png)
+
+> Cobertura: EC2 (subnets, VPC, IGW, NAT, SGs, route tables, EIP), DynamoDB (volunteers + tflock), EKS (cluster + node group), RDS (2 DBs + 2 snapshots + subnet group), SQS (main + DLQ). Inclui snapshots automáticos do RDS atestando `copy_tags_to_snapshot = true`.
 
 ---
 

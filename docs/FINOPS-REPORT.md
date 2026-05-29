@@ -276,12 +276,23 @@ kubectl top pods -n solidarytech
 
 ---
 
-## 5. Evidências (screenshots no relatório final)
+## 5. Evidências
 
-- AWS Cost Explorer filtrado por `tag:Project=SolidaryTech` mostrando breakdown
-- AWS Resource Groups → SolidaryTech: lista de todos recursos taggeados
-- Output do Terraform plan mostrando default_tags aplicadas a 30+ recursos
-- Screenshot do dashboard Grafana com painel "Pod resource usage" (rightsizing evidence)
+**AWS Tag Editor — 22 recursos com tag `Project = SolidaryTech` (us-east-1):**
+
+![AWS Tag Editor — 22 recursos tagged](screenshots/12-aws-tag-editor.png)
+
+Cobertura observada:
+- **EC2:** 13 recursos (VPC, IGW, NAT Gateway, EIP, 4 subnets, 2 route tables, 2 security groups, launch template)
+- **RDS:** 5 recursos (2 DBs + 2 snapshots automáticos + 1 subnet group)
+- **EKS:** 2 recursos (cluster + node group)
+- **DynamoDB:** 2 tabelas (volunteers + tflock)
+- **SQS:** 2 filas (main + DLQ)
+- **ECR:** 3 repositórios (visíveis via CLI; UI mostra subset)
+
+Total reportado pelo Resource Tagging API: **27 recursos** (incluindo route table associations e outros recursos internos não visíveis na UI).
+
+> **AWS Cost Explorer:** filtragem por tag exige ativação manual em **Billing > Cost allocation tags** + processamento de até **24h** para histórico aparecer. Como infra foi provisionada hoje, Tag Editor é a evidência imediata equivalente.
 
 ---
 

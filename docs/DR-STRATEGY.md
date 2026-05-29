@@ -197,6 +197,22 @@ Atualizar Route53 (futuro) ou comunicar novo endpoint a parceiros.
 
 ---
 
+## Evidências em execução
+
+**Velero — backup cross-region us-west-2 funcionando:**
+
+![Velero backups completed](screenshots/10-velero-backups-completed.png)
+
+> Schedule diário `solidarytech-daily` ativo (03:00 UTC, TTL 30 dias) + 2 backups manuais já completados. BackupStorageLocation `aws-us-west-2` em estado Available.
+
+**DynamoDB Global Tables — replica em us-west-2:**
+
+![DynamoDB Global Tables](screenshots/11-dynamodb-global-tables.png)
+
+> Replica `SolidaryTechVolunteers` em us-west-2 com status `ACTIVE`. Replicação multi-master nativa (latência típica < 1s).
+
+---
+
 ## Drills e validação contínua
 
 | Drill | Objetivo | Comando | Frequência |

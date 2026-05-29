@@ -156,6 +156,17 @@ Acesso: URL do LoadBalancer `prometheus-grafana`, credenciais via:
 kubectl get secret grafana-admin -n monitoring -o jsonpath='{.data.admin-password}' | base64 -d
 ```
 
+### Evidência visual
+
+**Dashboard ao vivo (visão geral):**
+![Grafana Overview](screenshots/04a-grafana-overview-dashboard.png)
+
+**Golden Metrics + Logs Loki em tempo real:**
+![Grafana Golden Metrics](screenshots/04b-grafana-overview-dashboard.png)
+
+**New Relic — Distributed Trace mostrando POST /donations → DB insert → SQS publish:**
+![New Relic Trace](screenshots/06-newrelic-distributed-trace.png)
+
 ---
 
 ## 7. MTTR (Mean Time To Recovery) — redução comprovada

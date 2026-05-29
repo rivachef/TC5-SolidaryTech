@@ -272,6 +272,28 @@ Salvar em `docs/postmortems/YYYY-MM-DD-incident-short-name.md`:
 
 ---
 
+## Evidências do fluxo em execução
+
+**PagerDuty — incidents criados via Alertmanager:**
+
+![PagerDuty incidents](screenshots/07-pagerduty-incidents.png)
+
+> 3 incidents triggered no service `SolidaryTech-Production` (Free Plan). Activity feed mostra "Triggered through the API" e descrição dos alertas.
+
+**Discord — canal #alerts com mensagens do Alertmanager + Self-Healing:**
+
+![Discord alerts](screenshots/08-discord-alerts.png)
+
+> Mensagens "CRITICAL: ..." em formato Slack-block recebidas via webhook do Alertmanager + notificações "🛠️ Self-Healing INICIADO/CONCLUIDO" via GitHub Actions.
+
+**Self-Healing GitHub Actions — workflow concluído em 43s:**
+
+![GitHub Actions self-healing](screenshots/09-github-actions-self-healing.png)
+
+> Workflow `Self-Healing — Pod Recovery` triggered via `workflow_dispatch`. Acao: `kubectl rollout restart deployment/donation-service`. Tempo total **43 segundos**, 3 pods reiniciados, notificacoes Discord enviadas em start + success.
+
+---
+
 ## Métricas do programa ITSM (review trimestral)
 
 | Métrica | Target | Como medir |
