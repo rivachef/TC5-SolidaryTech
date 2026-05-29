@@ -117,11 +117,26 @@ resource "aws_security_group" "eks_nodes" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # NodePort range — necessario quando LB do tipo NLB encaminha pro NodePort
+  # do Service preservando o IP do cliente original (target-type=instance).
+  # Sem isso, trafego do NGINX Ingress NLB nao chega nos pods.
   ingress {
-    description = "Trafego intra-cluster (Pod-to-Pod e kubelet)"
-    from_port   = 1025
-    to_port     = 65535
+    description = "Kubernetes NodePort range (NLB instance target)"
+    from_port   = 30000
+    to_port     = 32767
     protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # All-to-all entre membros do mesmo SG (cluster intra-traffic).
+  # CRITICO: precisa cobrir UDP/53 (DNS via CoreDNS), UDP geral (VXLAN),
+  # ICMP (health checks) — nao so TCP. Sem isso, pods em nodes diferentes
+  # nao conseguem resolver DNS (CoreDNS responde apenas no node onde roda).
+  ingress {
+    description = "All traffic between cluster members (DNS, kubelet, pod-to-pod)"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
     self        = true
   }
 
