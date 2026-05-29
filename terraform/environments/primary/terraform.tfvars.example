@@ -9,5 +9,7 @@ lab_role_arn = "arn:aws:iam::SEU_ACCOUNT_ID:role/LabRole"
 db_username = "solidary"
 db_password = "TROQUE_AQUI_DEV_PASSWORD"
 
-# Nodes do EKS (Sprint 5 fara rightsizing baseado em metricas reais)
-node_desired_size = 2
+# Nodes do EKS. Minimo 3 (decisao herdada FASE 4): t3.medium tem limite
+# de ~17 pods/node via AWS VPC CNI; com monitoring+ArgoCD+microsservicos,
+# 2 nodes saturam.
+node_desired_size = 3

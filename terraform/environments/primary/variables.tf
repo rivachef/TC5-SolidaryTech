@@ -34,7 +34,12 @@ variable "db_password" {
 }
 
 variable "node_desired_size" {
-  description = "Quantidade desejada inicial de nodes (Sprint 5 ajustara via rightsizing)."
+  # Decisao herdada da FASE 4: 3 nodes minimo. Justificativa: t3.medium tem
+  # limite de ~17 pods/node via AWS VPC CNI (n_ENIs do tipo de instancia).
+  # Com monitoring stack (13 pods) + ArgoCD (7) + NGINX Ingress + microsservicos
+  # (>7) + Velero, 2 nodes saturam — confirmado no Sprint 5 com "Too many pods"
+  # forcando scale para 3.
+  description = "Quantidade desejada de nodes. Minimo 3 para acomodar stack monitoring + GitOps + microsservicos (limite ~17 pods/node em t3.medium)."
   type        = number
   default     = 3
 }
