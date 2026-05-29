@@ -1,0 +1,93 @@
+# kube-prometheus-stack Helm values
+# Chart: prometheus-community/kube-prometheus-stack
+# Includes: Prometheus, Alertmanager, Grafana, node-exporter, kube-state-metrics
+
+grafana:
+  enabled: true
+  adminUser: admin
+  adminPassword: solidarytech2026
+
+  service:
+    type: LoadBalancer
+
+  # Datasources provisioned automatically
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      url: http://loki.monitoring.svc.cluster.local:3100
+      access: proxy
+      isDefault: false
+      jsonData:
+        maxLines: 1000
+
+  # Sidecar auto-loads dashboards from ConfigMaps with grafana_dashboard label
+  sidecar:
+    dashboards:
+      enabled: true
+      searchNamespace: monitoring
+      label: grafana_dashboard
+      folderAnnotation: grafana_folder
+      provider:
+        foldersFromFilesStructure: true
+
+  grafana.ini:
+    server:
+      root_url: "%(protocol)s://%(domain)s/"
+    unified_alerting:
+      enabled: true
+    alerting:
+      enabled: false
+
+prometheus:
+  prometheusSpec:
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+
+    retention: 7d
+    retentionSize: "5GB"
+
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+
+    # Storage: emptyDir (AWS Academy nao suporta IRSA/EBS CSI)
+    storageSpec: {}
+
+    # Necessario para o OTel Collector exportar metricas via remote_write
+    enableRemoteWriteReceiver: true
+
+    additionalScrapeConfigs:
+      - job_name: 'otel-collector'
+        scrape_interval: 15s
+        static_configs:
+          - targets: ['otel-collector-opentelemetry-collector.monitoring.svc.cluster.local:8888']
+
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+
+nodeExporter:
+  enabled: true
+
+kubeStateMetrics:
+  enabled: true
+
+defaultRules:
+  create: true
+  rules:
+    alertmanager: true
+    etcd: false             # nao acessivel em managed EKS
+    kubeProxy: false        # nao acessivel em managed EKS
+    kubeSchedulerAlerting: false
+    kubeSchedulerRecording: false

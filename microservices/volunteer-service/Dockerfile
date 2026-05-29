@@ -26,4 +26,4 @@ COPY --chown=app:app app.py ./
 USER app
 EXPOSE 8083
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8083", "--workers", "2", "--access-logfile", "-", "--error-logfile", "-", "app:app"]
+CMD ["opentelemetry-instrument", "gunicorn", "--bind", "0.0.0.0:8083", "--workers", "2", "--access-logfile", "-", "--error-logfile", "-", "app:app"]

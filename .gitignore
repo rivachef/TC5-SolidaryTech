@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 scripts/_generated/
+gitops/monitoring/newrelic-secret.yaml
 
 # Terraform
 **/.terraform/

@@ -7,8 +7,8 @@
 #
 # Sprint 2 (DONE):    bootstrap backend + terraform apply + kubeconfig
 # Sprint 3 (DONE):    CI/CD push de imagens pro ECR (via GitHub Actions)
-# Sprint 4 (atual):   + build/push 1a imagem + ArgoCD + GitOps + NGINX Ingress
-# Sprint 5 (futuro):  + Monitoring Stack (Prometheus + Loki + Grafana + OTel)
+# Sprint 4 (DONE):    + build/push 1a imagem + ArgoCD + GitOps + NGINX Ingress
+# Sprint 5 (atual):   + Monitoring Stack (Prometheus + Loki + Grafana + OTel + New Relic)
 # Sprint 6 (futuro):  + Velero + DR drill
 #
 # Uso:
@@ -292,10 +292,35 @@ done
 echo ""
 
 ###############################################################################
+# Step 11: New Relic secret (opcional, mas necessario p/ Distributed Tracing)
+###############################################################################
+log_info "[11/12] Verificando New Relic license key..."
+NR_FILE="$PROJECT_DIR/gitops/monitoring/newrelic-secret.yaml"
+if [ -f "$NR_FILE" ]; then
+    kubectl get namespace monitoring > /dev/null 2>&1 || kubectl create namespace monitoring
+    kubectl apply -f "$NR_FILE"
+    log_ok "New Relic secret aplicado"
+else
+    log_warn "$NR_FILE nao encontrado — pular Distributed Tracing externo (sem New Relic)"
+    echo "  Para configurar APM externo:"
+    echo "    cp gitops/monitoring/newrelic-secret.yaml.example gitops/monitoring/newrelic-secret.yaml"
+    echo "    # editar a license-key"
+    echo "    kubectl apply -f gitops/monitoring/newrelic-secret.yaml"
+fi
+echo ""
+
+###############################################################################
+# Step 12: Monitoring Stack (Prometheus + Loki + Grafana + OTel Collector)
+###############################################################################
+log_info "[12/12] Instalando Monitoring Stack..."
+"$SCRIPT_DIR/install-monitoring.sh"
+echo ""
+
+###############################################################################
 # Resumo final
 ###############################################################################
 echo "============================================"
-log_ok "Setup completo (Sprints 2-4)"
+log_ok "Setup completo (Sprints 2-5)"
 echo "============================================"
 echo ""
 
@@ -313,6 +338,12 @@ echo "  http://$INGRESS_URL/ngos"
 echo "  http://$INGRESS_URL/donations"
 echo "  http://$INGRESS_URL/volunteers"
 echo ""
-echo "Verificar pods:  kubectl get pods -n solidarytech"
+GRAFANA_URL=$(kubectl get svc prometheus-grafana -n monitoring -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "pendente")
+echo "Grafana:"
+echo "  URL:   http://$GRAFANA_URL"
+echo "  User:  admin"
+echo "  Pass:  solidarytech2026"
+echo ""
+echo "Verificar pods:  kubectl get pods -n solidarytech -n monitoring"
 echo "Destruir:        ./scripts/destroy-all.sh"
 echo "Renovar AWS:     ./scripts/update-aws-credentials.sh  (a cada 4h)"

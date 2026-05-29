@@ -6,3 +6,8 @@ metadata:
 data:
   PORT: "8082"
   AWS_REGION: "us-east-1"
+  # OpenTelemetry — donation-service usa SDK manual (Go),
+  # le este endpoint via os.Getenv em telemetry.go
+  OTEL_SERVICE_NAME: "donation-service"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "otel-collector-opentelemetry-collector.monitoring.svc.cluster.local:4317"
+  OTEL_RESOURCE_ATTRIBUTES: "service.namespace=solidarytech,deployment.environment=production"

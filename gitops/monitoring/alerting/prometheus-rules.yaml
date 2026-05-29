@@ -1,0 +1,139 @@
+# PrometheusRule para alertas da SolidaryTech.
+# Recursos sao automaticamente descobertos pelo kube-prometheus-stack.
+#
+# Foco: donation-service e o Hot Path (Caminho Critico). SLO 99.9% disponibilidade
+# + P95 < 300ms na latencia. SLIs sao calculados a partir das metricas
+# http_server_request_total e http_server_request_duration_seconds expostas
+# pela instrumentacao OTel.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: solidarytech-alerts
+  namespace: monitoring
+  labels:
+    release: prometheus
+    app.kubernetes.io/part-of: solidarytech
+spec:
+  groups:
+    # =====================================================================
+    # SLO / Golden Metrics: donation-service (Hot Path)
+    # =====================================================================
+    - name: solidarytech.donation.slo
+      interval: 30s
+      rules:
+        # SLI 1: Taxa de erros (non-5xx / total)
+        - record: sli:donation_service:availability:ratio_5m
+          expr: |
+            sum(rate(http_server_request_total{service_name="donation-service", http_response_status_code!~"5.."}[5m]))
+            /
+            sum(rate(http_server_request_total{service_name="donation-service"}[5m]))
+
+        # SLI 2: Latencia P95 do POST /donations
+        - record: sli:donation_service:latency_p95:5m
+          expr: |
+            histogram_quantile(0.95,
+              sum by (le) (rate(http_server_request_duration_seconds_bucket{service_name="donation-service"}[5m]))
+            )
+
+        # SLO 99.9% — alerta quando consumo de error budget acelera muito (fast burn)
+        - alert: DonationSLOFastBurn
+          expr: |
+            (1 - sli:donation_service:availability:ratio_5m) > (14.4 * (1 - 0.999))
+          for: 2m
+          labels:
+            severity: critical
+            service: donation-service
+            slo: availability
+          annotations:
+            summary: "Donation-service: SLO de disponibilidade em fast burn"
+            description: "Consumo de error budget em ritmo que esgota o orcamento mensal em <2h. Taxa de erro atual: {{ $value | humanizePercentage }}"
+
+        # Alerta de latencia: P95 acima do SLO de 300ms
+        - alert: DonationLatencyP95High
+          expr: sli:donation_service:latency_p95:5m > 0.3
+          for: 5m
+          labels:
+            severity: warning
+            service: donation-service
+            slo: latency
+          annotations:
+            summary: "Donation-service P95 acima do SLO (300ms)"
+            description: "Latencia P95 atual: {{ $value }}s (SLO: <0.3s)"
+
+    # =====================================================================
+    # Erros HTTP gerais (todos os 3 servicos)
+    # =====================================================================
+    - name: solidarytech.http.errors
+      rules:
+        - alert: HighErrorRate5xx
+          expr: |
+            (
+              sum(rate(http_server_request_total{service_name=~".*-service", http_response_status_code=~"5.."}[5m])) by (service_name)
+              /
+              sum(rate(http_server_request_total{service_name=~".*-service"}[5m])) by (service_name)
+            ) > 0.05
+          for: 2m
+          labels:
+            severity: critical
+            team: solidarytech
+          annotations:
+            summary: "Alta taxa de 5xx em {{ $labels.service_name }}"
+            description: "Servico {{ $labels.service_name }} com 5xx > 5% nos ultimos 2min. Atual: {{ $value | humanizePercentage }}"
+
+    # =====================================================================
+    # Saude de Pods
+    # =====================================================================
+    - name: solidarytech.pods.health
+      rules:
+        - alert: PodCrashLooping
+          expr: |
+            increase(kube_pod_container_status_restarts_total{namespace="solidarytech"}[15m]) > 3
+          for: 5m
+          labels:
+            severity: critical
+            team: solidarytech
+          annotations:
+            summary: "Pod em crash loop: {{ $labels.namespace }}/{{ $labels.pod }}"
+            description: "Container {{ $labels.container }} reiniciou {{ $value }}x nos ultimos 15min"
+
+        - alert: PodNotReady
+          expr: |
+            kube_pod_status_ready{namespace="solidarytech", condition="false"} == 1
+          for: 10m
+          labels:
+            severity: warning
+            team: solidarytech
+          annotations:
+            summary: "Pod nao pronto: {{ $labels.namespace }}/{{ $labels.pod }}"
+            description: "Pod nao atingiu Ready em 10min"
+
+    # =====================================================================
+    # Recursos (CPU/Memoria)
+    # =====================================================================
+    - name: solidarytech.resources
+      rules:
+        - alert: HighCPU
+          expr: |
+            sum(rate(container_cpu_usage_seconds_total{namespace="solidarytech"}[5m])) by (pod)
+            /
+            sum(kube_pod_container_resource_limits{namespace="solidarytech", resource="cpu"}) by (pod)
+            > 0.85
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "CPU alta em {{ $labels.pod }}"
+            description: "Pod consumindo > 85% do CPU limit por 10min. Avaliar rightsizing (FinOps)."
+
+        - alert: HighMemory
+          expr: |
+            sum(container_memory_working_set_bytes{namespace="solidarytech"}) by (pod)
+            /
+            sum(kube_pod_container_resource_limits{namespace="solidarytech", resource="memory"}) by (pod)
+            > 0.85
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Memoria alta em {{ $labels.pod }}"
+            description: "Pod consumindo > 85% da memoria limit por 10min."

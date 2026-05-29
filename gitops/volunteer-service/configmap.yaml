@@ -7,3 +7,9 @@ data:
   PORT: "8083"
   AWS_REGION: "us-east-1"
   AWS_DYNAMODB_TABLE: "SolidaryTechVolunteers"
+  # OpenTelemetry — auto-instrumentation Python (Flask + botocore)
+  OTEL_SERVICE_NAME: "volunteer-service"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector-opentelemetry-collector.monitoring.svc.cluster.local:4318"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+  OTEL_RESOURCE_ATTRIBUTES: "service.namespace=solidarytech,deployment.environment=production"
+  OTEL_PYTHON_LOG_CORRELATION: "true"
