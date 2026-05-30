@@ -170,6 +170,38 @@ done
 log_ok "LBs limpos"
 echo ""
 
+# ===== Step 2.5: Scale node group pra 0 (impede CNI de recriar ENIs durante destroy) =====
+# RACE FIX: sem isso, o aws-node DaemonSet recria ENIs assim que o terraform
+# destroy comeca a derrubar pods — trava o destroy de SG/subnet por 10+min.
+# Bug recorrente herdado da FASE 4. Scale-to-zero antes do destroy resolve.
+log_info "Escalando nodegroups EKS para 0 (preventivo contra ENI race)..."
+CLUSTER_NAME="solidarytech-cluster"
+NODEGROUPS=$(aws eks list-nodegroups --region "$REGION" --cluster-name "$CLUSTER_NAME" \
+    --query 'nodegroups[]' --output text 2>/dev/null || true)
+if [ -n "$NODEGROUPS" ]; then
+    for ng in $NODEGROUPS; do
+        log_info "  Scaling $ng -> 0"
+        aws eks update-nodegroup-config --region "$REGION" \
+            --cluster-name "$CLUSTER_NAME" --nodegroup-name "$ng" \
+            --scaling-config minSize=0,maxSize=1,desiredSize=0 >/dev/null 2>&1 || true
+    done
+    log_info "  Aguardando nodes terminarem (ate 5min)..."
+    for i in 1 2 3 4 5 6 7 8 9 10; do
+        ACTIVE=$(aws ec2 describe-instances --region "$REGION" \
+            --filters "Name=tag:eks:cluster-name,Values=$CLUSTER_NAME" \
+                      "Name=instance-state-name,Values=running,pending,stopping" \
+            --query 'Reservations[*].Instances[*].InstanceId' --output text 2>/dev/null | wc -w)
+        if [ "$ACTIVE" -eq 0 ]; then
+            log_ok "  Nodes terminados"
+            break
+        fi
+        sleep 30
+    done
+else
+    log_info "  Nenhum nodegroup ativo (cluster ja deletado ou state limpo)"
+fi
+echo ""
+
 # ===== Step 3: Cleanup ENIs orfas =====
 log_info "[3/5] Limpando ENIs orfas..."
 
@@ -208,6 +240,16 @@ for eni in json.load(sys.stdin):
         aws ec2 delete-network-interface --network-interface-id "$eni_id" --region "$REGION" 2>/dev/null || true
     done
     log_ok "ENIs limpas"
+
+    # EKS cluster SG (criado pela AWS, NAO pelo Terraform — fica orfao apos
+    # delete do cluster e segura a VPC por 5-10min. Bug recorrente FASE 4/5).
+    for sg in $(aws ec2 describe-security-groups --region "$REGION" \
+        --filters "Name=vpc-id,Values=$VPC_ID" \
+        --query "SecurityGroups[?starts_with(GroupName, 'eks-cluster-sg-')].GroupId" \
+        --output text 2>/dev/null); do
+        log_warn "  Deletando EKS cluster SG orfao: $sg"
+        aws ec2 delete-security-group --group-id "$sg" --region "$REGION" 2>/dev/null || true
+    done
 else
     log_ok "VPC nao encontrada (ja deletada)"
 fi
